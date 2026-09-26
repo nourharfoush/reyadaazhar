@@ -35,7 +35,7 @@ export default function LoginPage() {
       if (role === 'institute_manager') router.push('/dashboard/institute');
       else if (role === 'administration_supervisor') router.push('/dashboard/administration');
       else if (role === 'region_manager') router.push('/dashboard/region');
-      else router.push('/dashboard/general');
+      else router.push('/portal');
 
     } catch {
       setError('حدث خطأ في الاتصال. يرجى المحاولة مجدداً.');
@@ -49,8 +49,8 @@ export default function LoginPage() {
       <div className="login-card">
         <div className="login-header">
           <div className="login-logo">🏃</div>
-          <h1 className="login-title">منظومة المتابعة والقياس</h1>
-          <p className="login-subtitle">المشروع القومي للياقة البدنية بالمعاهد الأزهرية</p>
+          <h1 className="login-title" style={{ fontSize: '20px', marginBottom: '8px' }}>منظومة متابعة انشطة التربية الرياضية</h1>
+          <p className="login-subtitle">بالأزهر الشريف</p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>

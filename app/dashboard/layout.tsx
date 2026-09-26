@@ -98,9 +98,9 @@ export default function DashboardLayout({ children }: LayoutProps) {
         {/* Logo */}
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon">🏃</div>
-          <div className="sidebar-logo-text">
-            منظومة المتابعة
-            <small>المشروع القومي للياقة</small>
+          <div className="sidebar-logo-text" style={{ fontSize: '13px' }}>
+            منظومة متابعة انشطة التربية الرياضية
+            <small>بالازهر الشريف</small>
           </div>
         </div>
 

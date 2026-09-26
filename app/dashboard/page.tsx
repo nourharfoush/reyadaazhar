@@ -15,7 +15,7 @@ export default function DashboardRedirect() {
         if (role === 'institute_manager') router.push('/dashboard/institute');
         else if (role === 'administration_supervisor') router.push('/dashboard/administration');
         else if (role === 'region_manager') router.push('/dashboard/region');
-        else router.push('/dashboard/general');
+        else router.push('/portal');
       })
       .catch(() => router.push('/login'));
   }, [router]);
