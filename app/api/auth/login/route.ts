@@ -20,9 +20,9 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    // Check if system has any users; if not, auto-seed default admin
-    const totalUsers = await User.countDocuments();
-    if (totalUsers === 0) {
+    // Check if admin user exists; if not, auto-seed default admin
+    const adminExists = await User.findOne({ username: 'admin' });
+    if (!adminExists) {
       const defaultPasswordHash = await bcrypt.hash('admin123', 10);
       await User.create({
         username: 'admin',
