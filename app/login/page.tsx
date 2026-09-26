@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await res.json();
@@ -62,19 +62,21 @@ export default function LoginPage() {
           )}
 
           <div className="form-group">
-            <label className="form-label required" htmlFor="email">
-              البريد الإلكتروني
+            <label className="form-label required" htmlFor="username">
+              اسم المستخدم أو البريد
             </label>
             <input
-              id="email"
-              type="email"
+              id="username"
+              type="text"
               className="form-control"
-              placeholder="example@azhar.edu.eg"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              placeholder="مثال: admin"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
-              autoComplete="email"
+              autoComplete="username"
               disabled={loading}
+              dir="ltr"
+              style={{ textAlign: 'right' }}
             />
           </div>
 
@@ -93,7 +95,8 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 disabled={loading}
-                style={{ paddingLeft: '44px' }}
+                dir="ltr"
+                style={{ textAlign: 'right', paddingLeft: '44px' }}
               />
               <button
                 type="button"
@@ -116,16 +119,24 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-            <a href="/forgot-password" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--primary-600)' }}>
-              نسيت كلمة المرور؟
-            </a>
+          <div style={{
+            background: 'var(--gray-50)',
+            padding: '12px 14px',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            fontSize: '13px',
+            color: 'var(--gray-600)',
+            lineHeight: '1.6'
+          }}>
+            🔑 <strong>بيانات الدخول الافتراضية للمدير:</strong><br />
+            اسم المستخدم: <code style={{ color: 'var(--primary-700)', fontWeight: 'bold' }}>admin</code><br />
+            كلمة المرور: <code style={{ color: 'var(--primary-700)', fontWeight: 'bold' }}>admin123</code>
           </div>
 
           <button
             type="submit"
             className="btn btn-primary btn-lg btn-block"
-            disabled={loading || !email || !password}
+            disabled={loading || !username || !password}
           >
             {loading ? (
               <>

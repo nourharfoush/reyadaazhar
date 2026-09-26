@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
 // Public paths that don't require authentication
 const PUBLIC_PATHS = [
@@ -28,45 +27,60 @@ export async function middleware(request: NextRequest) {
 
   // Get token from cookies or Authorization header
   const token =
+    request.cookies.get('token')?.value ||
     request.cookies.get('sb-access-token')?.value ||
     request.headers.get('authorization')?.replace('Bearer ', '');
 
   if (!token) {
-    // Redirect to login for page routes
     if (!pathname.startsWith('/api/')) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
-    return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'غير مصرح بالوصول' } }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: { code: 'UNAUTHORIZED', message: 'غير مصرح بالوصول' } },
+      { status: 401 }
+    );
   }
 
-  // Verify token with Supabase
+  // Decode JWT payload (Edge runtime safe without heavy dependencies)
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-      if (!pathname.startsWith('/api/')) {
-        const response = NextResponse.redirect(new URL('/login', request.url));
-        response.cookies.delete('sb-access-token');
-        return response;
-      }
-      return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'انتهت صلاحية الجلسة' } }, { status: 401 });
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid token structure');
     }
 
-    // Inject user id into headers for downstream use
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+    
+    // Check expiration
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      if (!pathname.startsWith('/api/')) {
+        const res = NextResponse.redirect(new URL('/login', request.url));
+        res.cookies.delete('token');
+        res.cookies.delete('sb-access-token');
+        return res;
+      }
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: 'انتهت صلاحية الجلسة' } },
+        { status: 401 }
+      );
+    }
+
+    // Inject user headers
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-user-id', user.id);
-    requestHeaders.set('x-user-email', user.email || '');
+    requestHeaders.set('x-user-id', payload.userId || '');
+    requestHeaders.set('x-user-role', payload.role || '');
+    requestHeaders.set('x-user-username', payload.username || '');
 
     return NextResponse.next({ request: { headers: requestHeaders } });
   } catch {
     if (!pathname.startsWith('/api/')) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      const res = NextResponse.redirect(new URL('/login', request.url));
+      res.cookies.delete('token');
+      return res;
     }
-    return NextResponse.json({ success: false, error: { code: 'SERVER_ERROR', message: 'خطأ في التحقق من الهوية' } }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: { code: 'UNAUTHORIZED', message: 'رمز الدخول غير صالح' } },
+      { status: 401 }
+    );
   }
 }
 

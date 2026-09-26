@@ -1,90 +1,122 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import AuditLog from '@/models/AuditLog';
+import { signToken } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const loginIdentifier = (body.username || body.email || '').trim().toLowerCase();
+    const password = body.password || '';
 
-    if (!email || !password) {
+    if (!loginIdentifier || !password) {
       return NextResponse.json(
-        { success: false, error: { code: 'VALIDATION', message: 'البريد الإلكتروني وكلمة المرور مطلوبان' } },
+        { success: false, error: { code: 'VALIDATION', message: 'اسم المستخدم وكلمة المرور مطلوبان' } },
         { status: 400 }
       );
     }
 
-    // Authenticate with Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error || !data.user || !data.session) {
-      return NextResponse.json(
-        { success: false, error: { code: 'AUTH_FAILED', message: 'بيانات الدخول غير صحيحة' } },
-        { status: 401 }
-      );
-    }
-
-    // Get user from MongoDB
     await connectDB();
-    const dbUser = await User.findOne({ supabaseId: data.user.id }).lean();
 
-    if (!dbUser) {
+    // Check if system has any users; if not, auto-seed default admin
+    const totalUsers = await User.countDocuments();
+    if (totalUsers === 0) {
+      const defaultPasswordHash = await bcrypt.hash('admin123', 10);
+      await User.create({
+        username: 'admin',
+        email: 'admin@azhar.edu.eg',
+        passwordHash: defaultPasswordHash,
+        name: 'مدير النظام العام',
+        role: 'system_admin',
+        isActive: true,
+      });
+    }
+
+    // Find user by username or email
+    const user = await User.findOne({
+      $or: [{ username: loginIdentifier }, { email: loginIdentifier }],
+    });
+
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: { code: 'USER_NOT_FOUND', message: 'الحساب غير موجود في النظام' } },
+        { success: false, error: { code: 'AUTH_FAILED', message: 'اسم المستخدم أو كلمة المرور غير صحيحة' } },
         { status: 401 }
       );
     }
 
-    if (!(dbUser as any).isActive) {
+    if (!user.isActive) {
       return NextResponse.json(
-        { success: false, error: { code: 'ACCOUNT_DISABLED', message: 'الحساب معطل. تواصل مع مدير النظام' } },
+        { success: false, error: { code: 'ACCOUNT_DISABLED', message: 'هذا الحساب معطل، يرجى مراجعة إدارة النظام' } },
+        { status: 403 }
+      );
+    }
+
+    // Verify password
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return NextResponse.json(
+        { success: false, error: { code: 'AUTH_FAILED', message: 'اسم المستخدم أو كلمة المرور غير صحيحة' } },
         { status: 401 }
       );
     }
 
-    // Update last login
-    await User.findByIdAndUpdate((dbUser as any)._id, { lastLogin: new Date() });
+    // Update lastLogin
+    user.lastLogin = new Date();
+    await user.save();
 
-    // Log the login
+    // Sign JWT token
+    const token = signToken({
+      userId: user._id.toString(),
+      username: user.username,
+      role: user.role,
+    });
+
+    // Audit log
     try {
       await AuditLog.create({
-        userId: (dbUser as any)._id,
-        userEmail: (dbUser as any).email,
-        userRole: (dbUser as any).role,
+        userId: user._id,
+        userEmail: user.email || user.username,
+        userRole: user.role,
         action: 'LOGIN',
         entityType: 'User',
-        entityId: (dbUser as any)._id.toString(),
-        description: `تسجيل دخول المستخدم ${(dbUser as any).name}`,
-        ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
+        entityId: user._id.toString(),
+        description: `تسجيل دخول ناجح للمستخدم ${user.name} (${user.username})`,
+        ipAddress: req.headers.get('x-forwarded-for') || undefined,
         timestamp: new Date(),
       });
-    } catch { /* non-critical */ }
+    } catch {
+      // non-critical
+    }
 
-    // Set cookie and return response
     const response = NextResponse.json({
       success: true,
       data: {
-        role: (dbUser as any).role,
-        name: (dbUser as any).name,
-        email: (dbUser as any).email,
-        accessToken: data.session.access_token,
+        id: user._id.toString(),
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        regionId: user.regionId?.toString(),
+        administrationId: user.administrationId?.toString(),
+        instituteId: user.instituteId?.toString(),
+        token,
       },
     });
 
-    response.cookies.set('sb-access-token', data.session.access_token, {
+    // Set cookies
+    response.cookies.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 8, // 8 hours
+      maxAge: 7 * 24 * 60 * 60, // 7 days
       path: '/',
     });
 
     return response;
-  } catch (err) {
-    console.error('Login error:', err);
+  } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: { code: 'SERVER_ERROR', message: 'حدث خطأ في الخادم' } },
+      { success: false, error: { code: 'SERVER_ERROR', message: error.message || 'حدث خطأ في الخادم' } },
       { status: 500 }
     );
   }

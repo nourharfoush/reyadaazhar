@@ -1,23 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import connectDB from '@/lib/mongodb';
+import User from '@/models/User';
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json();
-    if (!email) {
-      return NextResponse.json({ success: false, error: { message: 'البريد الإلكتروني مطلوب' } }, { status: 400 });
+    const { username } = await req.json();
+    if (!username) {
+      return NextResponse.json({ success: false, error: { message: 'اسم المستخدم مطلوب' } }, { status: 400 });
     }
 
-    if (!supabase) {
-      return NextResponse.json({ success: false, error: { message: 'خدمة المصادقة غير متاحة' } }, { status: 503 });
+    await connectDB();
+    const user = await User.findOne({
+      $or: [{ username: username.trim().toLowerCase() }, { email: username.trim().toLowerCase() }],
+    });
+
+    if (!user) {
+      return NextResponse.json({ success: true, message: 'إذا كان الحساب مسجلاً، يرجى مراجعة مدير النظام لإعادة ضبط كلمة المرور' });
     }
 
-    const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`;
-    await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-
-    // Always return success to prevent email enumeration
-    return NextResponse.json({ success: true, message: 'تم إرسال رابط الاستعادة إذا كان البريد مسجلاً' });
+    return NextResponse.json({ 
+      success: true, 
+      message: 'يرجى التواصل مع مدير النظام لإعادة تعيين كلمة المرور لحسابك' 
+    });
   } catch {
-    return NextResponse.json({ success: false, error: { message: 'حدث خطأ' } }, { status: 500 });
+    return NextResponse.json({ success: false, error: { message: 'حدث خطأ في معالجة الطلب' } }, { status: 500 });
   }
 }

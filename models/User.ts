@@ -1,8 +1,9 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IUser extends Document {
-  supabaseId: string;
-  email: string;
+  username: string;
+  passwordHash: string;
+  email?: string;
   name: string;
   role: 'institute_manager' | 'administration_supervisor' | 'region_manager' | 'general_admin' | 'system_admin';
   isActive: boolean;
@@ -16,8 +17,9 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
-    supabaseId: { type: String, required: true, unique: true, index: true },
-    email: { type: String, required: true, unique: true, index: true },
+    username: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
+    passwordHash: { type: String, required: true },
+    email: { type: String, sparse: true, index: true, lowercase: true, trim: true },
     name: { type: String, required: true },
     role: {
       type: String,
