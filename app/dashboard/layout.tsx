@@ -125,7 +125,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
             }}
           >
             <span>🏠</span>
-            <span>العودة للكاردات الرئيسية</span>
+            <span>الأقسام الرئيسية</span>
           </button>
         </div>
 
