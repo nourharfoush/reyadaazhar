@@ -57,6 +57,18 @@ export default function PortalPage() {
             </button>
           </div>
         </div>
+
+        {/* Card 4 */}
+        <div className="portal-card" style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)', border: '1px solid #ddd6fe' }}>
+          <div className="portal-card-icon" style={{ background: '#8b5cf6', color: 'white' }}>📊</div>
+          <h2 className="portal-card-title">التقارير والمتابعات الميدانية</h2>
+          <div className="portal-buttons" style={{ gridTemplateColumns: '1fr' }}>
+            <button className="portal-btn primary-btn" onClick={() => router.push('/dashboard/reports')} style={{ borderColor: '#8b5cf6', color: '#6d28d9' }}>
+              <span>📄 استعراض التقارير</span>
+              <small>متاح الآن</small>
+            </button>
+          </div>
+        </div>
       </div>
 
       <style jsx>{`
