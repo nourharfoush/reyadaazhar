@@ -104,6 +104,31 @@ export default function DashboardLayout({ children }: LayoutProps) {
           </div>
         </div>
 
+        <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
+          <button
+            onClick={() => { router.push('/portal'); setSidebarOpen(false); }}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              borderRadius: 'var(--border-radius-sm)',
+              border: '1px solid var(--primary-200)',
+              background: 'var(--primary-50)',
+              color: 'var(--primary-700)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              fontFamily: 'inherit'
+            }}
+          >
+            <span>🏠</span>
+            <span>العودة للكاردات الرئيسية</span>
+          </button>
+        </div>
+
         {/* Nav */}
         <nav className="sidebar-nav">
           <div className="nav-section-title">القائمة الرئيسية</div>
